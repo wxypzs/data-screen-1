@@ -78,6 +78,7 @@ def main():
                 cpu_max_host[host] = mx
         elif mod == "mem_used":
             mem_host_used[host] += val * w
+            mem_host_total[host] += val * w
         elif mod in ("mem_free", "mem_buff", "mem_cache"):
             mem_host_total[host] += val * w
         elif mod == "net_in":
@@ -107,14 +108,14 @@ def main():
         if mod in MEM_MODS:
             w = fnum(r["sample_minutes"])
             key = (r["date"], r["hostid"])
+            v = fnum(r["avg_value"]) * w
+            bucket_total[key] += v
             if mod == "mem_used":
-                bucket_used[key] += fnum(r["avg_value"]) * w
-            else:
-                bucket_total[key] += fnum(r["avg_value"]) * w
+                bucket_used[key] += v
     for (d, _h), u in bucket_used.items():
         t = bucket_total.get((d, _h), 0.0)
         if t > 0:
-            mem_date_b[d][0] += (u / t) * 1.0
+            mem_date_b[d][0] += (u / t) * 100.0
             mem_date_b[d][1] += 1.0
 
     def wavg(a):
@@ -129,12 +130,15 @@ def main():
         loc1_cnt[m["location1"]] += 1
         owner_cnt[m["owner"]] += 1
 
-    # ---- 排序后的日期序列 ----
+    # ---- 日期序列 ----
+    # 注意: pref 类指标(CPU/内存/网络/负载)仅部分日期有采样, 磁盘类覆盖全量日期。
+    # 趋势图与 CPU/内存 KPI 只使用有 pref 采样的日期, 避免缺失日被填 0 导致指标失真。
     date_list = sorted(dates)
-    cpu_trend = [wavg(cpu_date[d]) for d in date_list]
-    mem_trend = [wavg(mem_date_b[d]) for d in date_list]
-    net_in_trend = [wavg(net_in_date[d]) for d in date_list]
-    net_out_trend = [wavg(net_out_date[d]) for d in date_list]
+    pref_dates = sorted(cpu_date.keys())
+    cpu_trend = [wavg(cpu_date[d]) for d in pref_dates]
+    mem_trend = [wavg(mem_date_b[d]) for d in pref_dates]
+    net_in_trend = [wavg(net_in_date[d]) for d in pref_dates]
+    net_out_trend = [wavg(net_out_date[d]) for d in pref_dates]
 
     load_curve = [wavg(load_hour[h]) for h in range(24)]
 
@@ -189,6 +193,7 @@ def main():
         "meta": {
             "n_hosts": len(host_meta),
             "n_days": len(date_list),
+            "n_pref_days": len(pref_dates),
             "date_start": date_list[0],
             "date_end": date_list[-1],
             "total_samples": int(total_samples),
@@ -196,7 +201,7 @@ def main():
             "avg_mem": avg_mem,
             "alert_hosts": alert_hosts,
         },
-        "dates": date_list,
+        "dates": pref_dates,
         "cpu_trend": cpu_trend,
         "mem_trend": mem_trend,
         "net_in_trend": net_in_trend,
@@ -315,7 +320,7 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
   <div id="main">
     <div class="panel" id="c_model"><div class="ptitle">主机型号构成</div><div class="chart" id="ch_model"></div><div class="scan"></div></div>
     <div class="panel" id="c_loc"><div class="ptitle">机房主机分布</div><div class="chart" id="ch_loc"></div></div>
-    <div class="panel" id="c_trend"><div class="ptitle">核心资源日趋势 · CPU / 内存使用率(%)</div><div class="chart" id="ch_trend"></div><div class="scan"></div></div>
+    <div class="panel" id="c_trend"><div class="ptitle" id="pt_trend">核心资源日趋势 · CPU / 内存使用率(%)</div><div class="chart" id="ch_trend"></div><div class="scan"></div></div>
     <div class="panel" id="c_net"><div class="ptitle">网络流量日趋势 · 入站/出站(MB/s)</div><div class="chart" id="ch_net"></div></div>
     <div class="panel" id="c_cpuloc"><div class="ptitle">各机房平均CPU对比(%)</div><div class="chart" id="ch_cpuloc"></div></div>
     <div class="panel" id="c_disk"><div class="ptitle">磁盘使用率 TOP10 主机(%)</div><div class="chart" id="ch_disk"></div></div>
@@ -376,6 +381,10 @@ mk('ch_loc').setOption({
 });
 
 // trend line
+// trend title: 标注采样天数
+document.getElementById('pt_trend').textContent =
+  '核心资源日趋势 · CPU / 内存使用率(%)  采样 ' + DATA.meta.n_pref_days + ' 天';
+
 mk('ch_trend').setOption({
   tooltip:{...tip,trigger:'axis'},
   legend:{top:0,right:10,textStyle:{color:'#9fc4e8',fontSize:11},itemWidth:14,itemHeight:8},
