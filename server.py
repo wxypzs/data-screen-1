@@ -38,9 +38,9 @@ class Handler(BaseHTTPRequestHandler):
     def do_GET(self):
         path = self.path.split("?")[0]
         if path in ("/", "/index.html"):
-            self._serve_file("index.html", "text/html; charset=utf-8")
-        elif path == "/echarts.min.js":
-            self._serve_file("echarts.min.js", "application/javascript; charset=utf-8")
+            self._serve_file("template.html", "text/html; charset=utf-8")
+        elif path in ("/echarts.min.js", "/echarts-gl.min.js"):
+            self._serve_file(path.lstrip("/"), "application/javascript; charset=utf-8")
         elif path == "/api/dashboard":
             try:
                 data = db_queries.build_dashboard_data()
