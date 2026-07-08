@@ -63,6 +63,9 @@
   tbody td{padding:5px 8px;text-align:center;color:#bcd8f5;border-bottom:1px solid rgba(54,143,222,.12);}
   tbody tr:nth-child(even){background:rgba(20,52,98,.25);}
   .ok{color:#36e3a0;} .warn{color:#ffd24d;} .alarm{color:#ff5d6c;font-weight:700;}
+  #err{position:absolute;top:88px;left:50%;transform:translateX(-50%);z-index:50;display:none;
+    background:rgba(140,24,36,.92);color:#ffe;padding:8px 18px;border-radius:5px;font-size:13px;
+    border:1px solid rgba(255,93,108,.6);box-shadow:0 0 18px rgba(255,93,108,.4);}
 
   .scan{position:absolute;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,#2fd6ff,transparent);
     animation:scan 6s linear infinite;opacity:.5;}
@@ -104,10 +107,11 @@
       <th>CPU峰值%</th><th>磁盘峰值%</th><th>状态</th>
     </tr></thead><tbody id="tbody"></tbody></table></div>
   </div>
+
+  <div id="err"></div>
 </div>
 
 <script>
-const DATA = {"meta": {"n_hosts": 20, "n_days": 42, "n_pref_days": 7, "date_start": "2026-07-01", "date_end": "2026-08-11", "total_samples": 79200, "avg_cpu": 43.2, "avg_mem": 25.1, "alert_hosts": 3}, "dates": ["2026-07-01", "2026-07-02", "2026-07-03", "2026-07-04", "2026-07-05", "2026-07-06", "2026-07-07"], "cpu_trend": [43.72, 42.13, 44.04, 42.33, 43.29, 43.71, 43.18], "mem_trend": [25.2, 25.3, 24.75, 24.59, 24.68, 25.84, 25.37], "net_in_trend": [528.56, 513.43, 491.47, 490.0, 479.59, 501.61, 494.13], "net_out_trend": [488.93, 495.53, 501.8, 507.08, 513.88, 518.39, 493.65], "load_curve": [16.26, 16.04, 16.12, 16.29, 15.47, 15.29, 16.09, 16.12, 15.92, 14.94, 15.59, 15.71, 15.55, 16.67, 15.06, 15.97, 16.29, 16.04, 15.59, 16.02, 16.65, 15.39, 16.54, 17.08], "model": {"keys": ["Dell R750", "HP DL388", "Huawei 2288H", "Dell R740", "Lenovo SR650", "Lenovo SR860"], "vals": [4, 4, 5, 2, 2, 3]}, "loc1": {"keys": ["A机房", "B机房", "E机房", "C机房", "D机房"], "vals": [7, 4, 4, 3, 2]}, "owner": {"keys": ["刘六", "吴十", "孙八", "李四", "林四", "王二", "王五", "赵六", "钱七", "陈三", "黄五"], "vals": {"陈三": 1, "钱七": 2, "林四": 4, "王二": 3, "李四": 3, "王五": 1, "刘六": 2, "黄五": 1, "赵六": 1, "吴十": 1, "孙八": 1}, "cpu": [44.04, 39.6, 45.35, 42.95, 42.24, 44.26, 43.28, 44.31, 42.93, 42.93, 44.0]}, "cpu_loc": {"keys": ["A机房", "B机房", "C机房", "D机房", "E机房"], "vals": [43.09, 43.07, 43.42, 44.45, 42.73]}, "disk_top": {"hosts": ["server-001.hismartlab.cn", "server-018.hismartlab.cn", "server-017.hismartlab.cn", "server-011.hismartlab.cn", "server-013.hismartlab.cn", "server-019.hismartlab.cn", "server-004.hismartlab.cn", "server-003.hismartlab.cn", "server-020.hismartlab.cn", "server-008.hismartlab.cn"], "vals": [49.6, 50.19, 50.64, 51.03, 51.3, 52.88, 53.29, 54.17, 54.64, 56.34]}, "table": [{"host": "server-008.hismartlab.cn", "owner": "王二", "model": "Lenovo SR650", "loc": "A机房-机柜03", "cpu": 46.32, "mem": 24.5, "disk": 56.34, "load": 31.84, "cpumx": 79.6, "diskmx": 97.2, "status": "告警"}, {"host": "server-020.hismartlab.cn", "owner": "孙八", "model": "HP DL388", "loc": "C机房-机柜12", "cpu": 45.35, "mem": 24.1, "disk": 54.64, "load": 32.0, "cpumx": 79.0, "diskmx": 99.0, "status": "告警"}, {"host": "server-018.hismartlab.cn", "owner": "刘六", "model": "Dell R750", "loc": "D机房-机柜05", "cpu": 44.9, "mem": 24.8, "disk": 50.19, "load": 31.87, "cpumx": 79.6, "diskmx": 98.7, "status": "关注"}, {"host": "server-005.hismartlab.cn", "owner": "李四", "model": "HP DL388", "loc": "B机房-机柜09", "cpu": 44.78, "mem": 24.3, "disk": 44.36, "load": 31.79, "cpumx": 79.6, "diskmx": 96.4, "status": "关注"}, {"host": "server-007.hismartlab.cn", "owner": "林四", "model": "Huawei 2288H", "loc": "B机房-机柜08", "cpu": 44.32, "mem": 25.2, "disk": 46.18, "load": 31.68, "cpumx": 79.8, "diskmx": 99.2, "status": "关注"}, {"host": "server-017.hismartlab.cn", "owner": "赵六", "model": "Lenovo SR650", "loc": "A机房-机柜04", "cpu": 44.31, "mem": 25.1, "disk": 50.64, "load": 31.95, "cpumx": 80.0, "diskmx": 98.9, "status": "关注"}, {"host": "server-013.hismartlab.cn", "owner": "黄五", "model": "Dell R740", "loc": "D机房-机柜09", "cpu": 44.0, "mem": 24.5, "disk": 51.3, "load": 31.86, "cpumx": 79.9, "diskmx": 98.1, "status": "关注"}, {"host": "server-006.hismartlab.cn", "owner": "王二", "model": "Dell R740", "loc": "E机房-机柜04", "cpu": 43.97, "mem": 25.0, "disk": 45.69, "load": 31.66, "cpumx": 79.2, "diskmx": 99.5, "status": "正常"}, {"host": "server-002.hismartlab.cn", "owner": "钱七", "model": "HP DL388", "loc": "B机房-机柜03", "cpu": 43.56, "mem": 24.4, "disk": 45.51, "load": 31.99, "cpumx": 79.9, "diskmx": 96.4, "status": "关注"}, {"host": "server-014.hismartlab.cn", "owner": "李四", "model": "Huawei 2288H", "loc": "A机房-机柜09", "cpu": 43.5, "mem": 25.8, "disk": 47.64, "load": 31.9, "cpumx": 79.8, "diskmx": 99.0, "status": "正常"}, {"host": "server-010.hismartlab.cn", "owner": "王五", "model": "HP DL388", "loc": "C机房-机柜02", "cpu": 43.28, "mem": 25.1, "disk": 47.62, "load": 31.83, "cpumx": 80.0, "diskmx": 99.5, "status": "正常"}, {"host": "server-012.hismartlab.cn", "owner": "刘六", "model": "Lenovo SR860", "loc": "E机房-机柜05", "cpu": 43.17, "mem": 24.7, "disk": 48.56, "load": 31.53, "cpumx": 79.9, "diskmx": 99.7, "status": "关注"}, {"host": "server-001.hismartlab.cn", "owner": "陈三", "model": "Dell R750", "loc": "A机房-机柜12", "cpu": 42.93, "mem": 26.2, "disk": 49.6, "load": 31.57, "cpumx": 79.8, "diskmx": 99.2, "status": "正常"}, {"host": "server-004.hismartlab.cn", "owner": "王二", "model": "Huawei 2288H", "loc": "A机房-机柜01", "cpu": 42.48, "mem": 25.5, "disk": 53.29, "load": 31.89, "cpumx": 79.9, "diskmx": 99.8, "status": "关注"}, {"host": "server-015.hismartlab.cn", "owner": "钱七", "model": "Lenovo SR860", "loc": "E机房-机柜04", "cpu": 42.29, "mem": 23.9, "disk": 47.54, "load": 31.26, "cpumx": 79.7, "diskmx": 96.9, "status": "正常"}, {"host": "server-009.hismartlab.cn", "owner": "林四", "model": "Huawei 2288H", "loc": "C机房-机柜05", "cpu": 41.64, "mem": 28.0, "disk": 47.79, "load": 31.83, "cpumx": 79.5, "diskmx": 98.3, "status": "正常"}, {"host": "server-016.hismartlab.cn", "owner": "林四", "model": "Dell R750", "loc": "A机房-机柜11", "cpu": 41.52, "mem": 26.0, "disk": 48.48, "load": 31.96, "cpumx": 79.5, "diskmx": 99.2, "status": "正常"}, {"host": "server-003.hismartlab.cn", "owner": "林四", "model": "Dell R750", "loc": "E机房-机柜02", "cpu": 41.47, "mem": 25.4, "disk": 54.17, "load": 31.85, "cpumx": 79.6, "diskmx": 99.1, "status": "告警"}, {"host": "server-011.hismartlab.cn", "owner": "李四", "model": "Huawei 2288H", "loc": "A机房-机柜06", "cpu": 40.57, "mem": 25.0, "disk": 51.03, "load": 31.97, "cpumx": 79.8, "diskmx": 99.0, "status": "关注"}, {"host": "server-019.hismartlab.cn", "owner": "吴十", "model": "Lenovo SR860", "loc": "B机房-机柜06", "cpu": 39.6, "mem": 24.6, "disk": 52.88, "load": 31.93, "cpumx": 79.8, "diskmx": 99.8, "status": "关注"}]};
 const C = { cyan:'#2fd6ff', blue:'#2f7bff', teal:'#1fd6c2', purple:'#9b7bff',
   green:'#36e3a0', yellow:'#ffd24d', red:'#ff5d6c', orange:'#ff9f45' };
 const axis = { axisLine:{lineStyle:{color:'rgba(90,150,210,.4)'}},
@@ -115,117 +119,125 @@ const axis = { axisLine:{lineStyle:{color:'rgba(90,150,210,.4)'}},
 const tip = { backgroundColor:'rgba(8,22,46,.92)', borderColor:'rgba(54,143,222,.5)',
   textStyle:{color:'#cfe6ff'} };
 
-function mk(id){ const c=echarts.init(document.getElementById(id)); charts.push(c); return c; }
+// 图表实例只初始化一次, 后续轮询用 setOption 更新
 const charts=[];
+const G = {
+  model:  echarts.init(document.getElementById('ch_model')),
+  loc:    echarts.init(document.getElementById('ch_loc')),
+  trend:  echarts.init(document.getElementById('ch_trend')),
+  net:    echarts.init(document.getElementById('ch_net')),
+  cpuloc: echarts.init(document.getElementById('ch_cpuloc')),
+  disk:   echarts.init(document.getElementById('ch_disk')),
+};
+Object.values(G).forEach(c=>charts.push(c));
 
-// KPI
-const m=DATA.meta;
-k_hosts.innerHTML=m.n_hosts;
-k_days.innerHTML=m.n_days;
-k_samp.innerHTML=(m.total_samples/10000).toFixed(1);
-k_cpu.innerHTML=m.avg_cpu+'<small>%</small>';
-k_mem.innerHTML=m.avg_mem+'<small>%</small>';
-k_alarm.innerHTML=m.alert_hosts;
+let META=null, lastUpdate='';
 
-// model pie
-mk('ch_model').setOption({
-  tooltip:{...tip,trigger:'item',formatter:'{b}: {c} 台 ({d}%)'},
-  legend:{bottom:4,textStyle:{color:'#9fc4e8',fontSize:11},itemWidth:10,itemHeight:10},
-  color:[C.cyan,C.blue,C.teal,C.purple,C.green,C.orange],
-  series:[{type:'pie',radius:['42%','66%'],center:['50%','46%'],
-    itemStyle:{borderColor:'#07152e',borderWidth:2},
-    label:{color:'#bcd8f5',fontSize:11,formatter:'{b}\n{c}'},
-    data:DATA.model.keys.map((k,i)=>({name:k,value:DATA.model.vals[i]}))}]
-});
+function render(DATA){
+  META = DATA.meta;
+  const m=DATA.meta;
+  k_hosts.innerHTML=m.n_hosts;
+  k_days.innerHTML=m.n_days;
+  k_samp.innerHTML=(m.total_samples/10000).toFixed(1);
+  k_cpu.innerHTML=m.avg_cpu+'<small>%</small>';
+  k_mem.innerHTML=m.avg_mem+'<small>%</small>';
+  k_alarm.innerHTML=m.alert_hosts;
 
-// loc bar
-mk('ch_loc').setOption({
-  tooltip:{...tip,trigger:'axis',axisPointer:{type:'shadow'}},
-  grid:{left:50,right:24,top:18,bottom:24},
-  xAxis:{type:'category',data:DATA.loc1.keys,...axis},
-  yAxis:{type:'value',...axis},
-  series:[{type:'bar',data:DATA.loc1.vals,barWidth:'46%',
-    itemStyle:{borderRadius:[4,4,0,0],
-      color:new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:C.cyan},{offset:1,color:C.blue}])},
-    label:{show:true,position:'top',color:'#bcd8f5'}}]
-});
+  document.getElementById('pt_trend').textContent =
+    '核心资源日趋势 · CPU / 内存使用率(%)  采样 ' + m.n_pref_days + ' 天';
 
-// trend line
-// trend title: 标注采样天数
-document.getElementById('pt_trend').textContent =
-  '核心资源日趋势 · CPU / 内存使用率(%)  采样 ' + DATA.meta.n_pref_days + ' 天';
+  G.model.setOption({
+    tooltip:{...tip,trigger:'item',formatter:'{b}: {c} 台 ({d}%)'},
+    legend:{bottom:4,textStyle:{color:'#9fc4e8',fontSize:11},itemWidth:10,itemHeight:10},
+    color:[C.cyan,C.blue,C.teal,C.purple,C.green,C.orange],
+    series:[{type:'pie',radius:['42%','66%'],center:['50%','46%'],
+      itemStyle:{borderColor:'#07152e',borderWidth:2},
+      label:{color:'#bcd8f5',fontSize:11,formatter:'{b}\n{c}'},
+      data:DATA.model.keys.map((k,i)=>({name:k,value:DATA.model.vals[i]}))}]
+  });
 
-mk('ch_trend').setOption({
-  tooltip:{...tip,trigger:'axis'},
-  legend:{top:0,right:10,textStyle:{color:'#9fc4e8',fontSize:11},itemWidth:14,itemHeight:8},
-  grid:{left:46,right:18,top:34,bottom:54},
-  xAxis:{type:'category',data:DATA.dates,boundaryGap:false,
-    axisLabel:{color:'#8fb4d8',fontSize:10,interval:Math.floor(DATA.dates.length/12)},...axis},
-  yAxis:{type:'value',max:100,...axis},
-  series:[
-    {name:'CPU使用率',type:'line',smooth:true,data:DATA.cpu_trend,symbol:'none',
-      lineStyle:{width:2,color:C.cyan},areaStyle:{color:new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'rgba(47,214,255,.35)'},{offset:1,color:'rgba(47,214,255,0)'}])}},
-    {name:'内存使用率',type:'line',smooth:true,data:DATA.mem_trend,symbol:'none',
-      lineStyle:{width:2,color:C.purple},areaStyle:{color:new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'rgba(155,123,255,.30)'},{offset:1,color:'rgba(155,123,255,0)'}])}}
-  ]
-});
+  G.loc.setOption({
+    tooltip:{...tip,trigger:'axis',axisPointer:{type:'shadow'}},
+    grid:{left:50,right:24,top:18,bottom:24},
+    xAxis:{type:'category',data:DATA.loc1.keys,...axis},
+    yAxis:{type:'value',...axis},
+    series:[{type:'bar',data:DATA.loc1.vals,barWidth:'46%',
+      itemStyle:{borderRadius:[4,4,0,0],
+        color:new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:C.cyan},{offset:1,color:C.blue}])},
+      label:{show:true,position:'top',color:'#bcd8f5'}}]
+  });
 
-// net line
-mk('ch_net').setOption({
-  tooltip:{...tip,trigger:'axis'},
-  legend:{top:0,right:10,textStyle:{color:'#9fc4e8',fontSize:11},itemWidth:14,itemHeight:8},
-  grid:{left:50,right:18,top:34,bottom:54},
-  xAxis:{type:'category',data:DATA.dates,boundaryGap:false,
-    axisLabel:{color:'#8fb4d8',fontSize:10,interval:Math.floor(DATA.dates.length/12)},...axis},
-  yAxis:{type:'value',...axis},
-  series:[
-    {name:'网络入站',type:'line',smooth:true,data:DATA.net_in_trend,symbol:'none',lineStyle:{width:2,color:C.teal}},
-    {name:'网络出站',type:'line',smooth:true,data:DATA.net_out_trend,symbol:'none',lineStyle:{width:2,color:C.orange}}
-  ]
-});
+  G.trend.setOption({
+    tooltip:{...tip,trigger:'axis'},
+    legend:{top:0,right:10,textStyle:{color:'#9fc4e8',fontSize:11},itemWidth:14,itemHeight:8},
+    grid:{left:46,right:18,top:34,bottom:54},
+    xAxis:{type:'category',data:DATA.dates,boundaryGap:false,
+      axisLabel:{color:'#8fb4d8',fontSize:10,interval:Math.floor(DATA.dates.length/12)},...axis},
+    yAxis:{type:'value',max:100,...axis},
+    series:[
+      {name:'CPU使用率',type:'line',smooth:true,data:DATA.cpu_trend,symbol:'none',
+        lineStyle:{width:2,color:C.cyan},areaStyle:{color:new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'rgba(47,214,255,.35)'},{offset:1,color:'rgba(47,214,255,0)'}])}},
+      {name:'内存使用率',type:'line',smooth:true,data:DATA.mem_trend,symbol:'none',
+        lineStyle:{width:2,color:C.purple},areaStyle:{color:new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'rgba(155,123,255,.30)'},{offset:1,color:'rgba(155,123,255,0)'}])}}
+    ]
+  });
 
-// cpu by loc
-mk('ch_cpuloc').setOption({
-  tooltip:{...tip,trigger:'axis',axisPointer:{type:'shadow'}},
-  grid:{left:40,right:18,top:18,bottom:24},
-  xAxis:{type:'category',data:DATA.cpu_loc.keys,...axis},
-  yAxis:{type:'value',max:100,...axis},
-  series:[{type:'bar',data:DATA.cpu_loc.vals,barWidth:'46%',
-    itemStyle:{borderRadius:[4,4,0,0],
-      color:new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:C.purple},{offset:1,color:C.blue}])},
-    label:{show:true,position:'top',color:'#bcd8f5',formatter:'{c}%'}}]
-});
+  G.net.setOption({
+    tooltip:{...tip,trigger:'axis'},
+    legend:{top:0,right:10,textStyle:{color:'#9fc4e8',fontSize:11},itemWidth:14,itemHeight:8},
+    grid:{left:50,right:18,top:34,bottom:54},
+    xAxis:{type:'category',data:DATA.dates,boundaryGap:false,
+      axisLabel:{color:'#8fb4d8',fontSize:10,interval:Math.floor(DATA.dates.length/12)},...axis},
+    yAxis:{type:'value',...axis},
+    series:[
+      {name:'网络入站',type:'line',smooth:true,data:DATA.net_in_trend,symbol:'none',lineStyle:{width:2,color:C.teal}},
+      {name:'网络出站',type:'line',smooth:true,data:DATA.net_out_trend,symbol:'none',lineStyle:{width:2,color:C.orange}}
+    ]
+  });
 
-// disk top10
-mk('ch_disk').setOption({
-  tooltip:{...tip,trigger:'axis',axisPointer:{type:'shadow'}},
-  grid:{left:120,right:36,top:8,bottom:18},
-  xAxis:{type:'value',max:100,...axis},
-  yAxis:{type:'category',data:DATA.disk_top.hosts,...axis,axisLabel:{color:'#8fb4d8',fontSize:10}},
-  series:[{type:'bar',data:DATA.disk_top.vals,barWidth:'58%',
-    itemStyle:{borderRadius:[0,4,4,0],
-      color:new echarts.graphic.LinearGradient(0,0,1,0,[{offset:0,color:C.blue},{offset:1,color:C.red}])},
-    label:{show:true,position:'right',color:'#bcd8f5',formatter:'{c}%'}}]
-});
+  G.cpuloc.setOption({
+    tooltip:{...tip,trigger:'axis',axisPointer:{type:'shadow'}},
+    grid:{left:40,right:18,top:18,bottom:24},
+    xAxis:{type:'category',data:DATA.cpu_loc.keys,...axis},
+    yAxis:{type:'value',max:100,...axis},
+    series:[{type:'bar',data:DATA.cpu_loc.vals,barWidth:'46%',
+      itemStyle:{borderRadius:[4,4,0,0],
+        color:new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:C.purple},{offset:1,color:C.blue}])},
+      label:{show:true,position:'top',color:'#bcd8f5',formatter:'{c}%'}}]
+  });
 
-// table
-const tb=document.getElementById('tbody');
-DATA.table.forEach(r=>{
-  const s = r.status==='告警'?'<span class="alarm">告警</span>'
-    : r.status==='关注'?'<span class="warn">关注</span>':'<span class="ok">正常</span>';
-  const tr=document.createElement('tr');
-  tr.innerHTML=`<td>${r.host}</td><td>${r.owner}</td><td>${r.model}</td><td>${r.loc}</td>
-    <td>${r.cpu}</td><td>${r.mem}</td><td>${r.disk}</td><td>${r.load}</td>
-    <td>${r.cpumx}</td><td>${r.diskmx}</td><td>${s}</td>`;
-  tb.appendChild(tr);
-});
+  G.disk.setOption({
+    tooltip:{...tip,trigger:'axis',axisPointer:{type:'shadow'}},
+    grid:{left:120,right:36,top:8,bottom:18},
+    xAxis:{type:'value',max:100,...axis},
+    yAxis:{type:'category',data:DATA.disk_top.hosts,...axis,axisLabel:{color:'#8fb4d8',fontSize:10}},
+    series:[{type:'bar',data:DATA.disk_top.vals,barWidth:'58%',
+      itemStyle:{borderRadius:[0,4,4,0],
+        color:new echarts.graphic.LinearGradient(0,0,1,0,[{offset:0,color:C.blue},{offset:1,color:C.red}])},
+      label:{show:true,position:'right',color:'#bcd8f5',formatter:'{c}%'}}]
+  });
+
+  const tb=document.getElementById('tbody'); tb.innerHTML='';
+  DATA.table.forEach(r=>{
+    const s = r.status==='告警'?'<span class="alarm">告警</span>'
+      : r.status==='关注'?'<span class="warn">关注</span>':'<span class="ok">正常</span>';
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td>${r.host}</td><td>${r.owner}</td><td>${r.model}</td><td>${r.loc}</td>
+      <td>${r.cpu}</td><td>${r.mem}</td><td>${r.disk}</td><td>${r.load}</td>
+      <td>${r.cpumx}</td><td>${r.diskmx}</td><td>${s}</td>`;
+    tb.appendChild(tr);
+  });
+
+  document.getElementById('err').style.display='none';
+}
 
 // clock
 function tick(){
   const d=new Date();
   const p=n=>String(n).padStart(2,'0');
   clk.textContent=`${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
-  dt.textContent=`${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}  数据区间 ${m.date_start} ~ ${m.date_end}`;
+  if(META) dt.textContent=`${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}  数据区间 ${META.date_start} ~ ${META.date_end}  更新 ${lastUpdate}`;
+  else dt.textContent=`${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}`;
 }
 tick(); setInterval(tick,1000);
 
@@ -236,6 +248,16 @@ function fit(){
 }
 window.addEventListener('resize',()=>{fit();charts.forEach(c=>c.resize());});
 fit();
+
+// 直连 MySQL: 拉取实时聚合数据并每 30s 刷新
+function load(){
+  fetch('/api/dashboard').then(r=>{ if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
+    .then(d=>{ if(d.error) throw new Error(d.error); lastUpdate=new Date().toLocaleTimeString(); render(d); })
+    .catch(e=>{ const el=document.getElementById('err'); el.style.display='block';
+      el.textContent='无法连接 /api/dashboard: '+e.message+'  (请先运行 python server.py 并确认 MySQL 已启动)'; });
+}
+load();
+setInterval(load, 30000);
 </script>
 </body>
 </html>

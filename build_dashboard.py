@@ -26,7 +26,14 @@ def fnum(x):
 
 
 def main():
-    rows = load()
+    # 大屏现直连 MySQL (server.py), 此处仅生成前端模板
+    with open("index.html", "w", encoding="utf-8") as f:
+        f.write(HTML_TEMPLATE)
+    print("已生成 index.html (直连 MySQL 模式)")
+    print("启动: python server.py  ->  http://localhost:8000")
+    return
+
+    rows = load()  # 以下为旧版离线 CSV 聚合, 已不再使用
 
     # ---- 主机元数据 (去重) ----
     host_meta = {}
@@ -293,6 +300,9 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
   tbody td{padding:5px 8px;text-align:center;color:#bcd8f5;border-bottom:1px solid rgba(54,143,222,.12);}
   tbody tr:nth-child(even){background:rgba(20,52,98,.25);}
   .ok{color:#36e3a0;} .warn{color:#ffd24d;} .alarm{color:#ff5d6c;font-weight:700;}
+  #err{position:absolute;top:88px;left:50%;transform:translateX(-50%);z-index:50;display:none;
+    background:rgba(140,24,36,.92);color:#ffe;padding:8px 18px;border-radius:5px;font-size:13px;
+    border:1px solid rgba(255,93,108,.6);box-shadow:0 0 18px rgba(255,93,108,.4);}
 
   .scan{position:absolute;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,#2fd6ff,transparent);
     animation:scan 6s linear infinite;opacity:.5;}
@@ -334,10 +344,11 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
       <th>CPU峰值%</th><th>磁盘峰值%</th><th>状态</th>
     </tr></thead><tbody id="tbody"></tbody></table></div>
   </div>
+
+  <div id="err"></div>
 </div>
 
 <script>
-const DATA = /*__DATA__*/;
 const C = { cyan:'#2fd6ff', blue:'#2f7bff', teal:'#1fd6c2', purple:'#9b7bff',
   green:'#36e3a0', yellow:'#ffd24d', red:'#ff5d6c', orange:'#ff9f45' };
 const axis = { axisLine:{lineStyle:{color:'rgba(90,150,210,.4)'}},
@@ -345,117 +356,125 @@ const axis = { axisLine:{lineStyle:{color:'rgba(90,150,210,.4)'}},
 const tip = { backgroundColor:'rgba(8,22,46,.92)', borderColor:'rgba(54,143,222,.5)',
   textStyle:{color:'#cfe6ff'} };
 
-function mk(id){ const c=echarts.init(document.getElementById(id)); charts.push(c); return c; }
+// 图表实例只初始化一次, 后续轮询用 setOption 更新
 const charts=[];
+const G = {
+  model:  echarts.init(document.getElementById('ch_model')),
+  loc:    echarts.init(document.getElementById('ch_loc')),
+  trend:  echarts.init(document.getElementById('ch_trend')),
+  net:    echarts.init(document.getElementById('ch_net')),
+  cpuloc: echarts.init(document.getElementById('ch_cpuloc')),
+  disk:   echarts.init(document.getElementById('ch_disk')),
+};
+Object.values(G).forEach(c=>charts.push(c));
 
-// KPI
-const m=DATA.meta;
-k_hosts.innerHTML=m.n_hosts;
-k_days.innerHTML=m.n_days;
-k_samp.innerHTML=(m.total_samples/10000).toFixed(1);
-k_cpu.innerHTML=m.avg_cpu+'<small>%</small>';
-k_mem.innerHTML=m.avg_mem+'<small>%</small>';
-k_alarm.innerHTML=m.alert_hosts;
+let META=null, lastUpdate='';
 
-// model pie
-mk('ch_model').setOption({
-  tooltip:{...tip,trigger:'item',formatter:'{b}: {c} 台 ({d}%)'},
-  legend:{bottom:4,textStyle:{color:'#9fc4e8',fontSize:11},itemWidth:10,itemHeight:10},
-  color:[C.cyan,C.blue,C.teal,C.purple,C.green,C.orange],
-  series:[{type:'pie',radius:['42%','66%'],center:['50%','46%'],
-    itemStyle:{borderColor:'#07152e',borderWidth:2},
-    label:{color:'#bcd8f5',fontSize:11,formatter:'{b}\n{c}'},
-    data:DATA.model.keys.map((k,i)=>({name:k,value:DATA.model.vals[i]}))}]
-});
+function render(DATA){
+  META = DATA.meta;
+  const m=DATA.meta;
+  k_hosts.innerHTML=m.n_hosts;
+  k_days.innerHTML=m.n_days;
+  k_samp.innerHTML=(m.total_samples/10000).toFixed(1);
+  k_cpu.innerHTML=m.avg_cpu+'<small>%</small>';
+  k_mem.innerHTML=m.avg_mem+'<small>%</small>';
+  k_alarm.innerHTML=m.alert_hosts;
 
-// loc bar
-mk('ch_loc').setOption({
-  tooltip:{...tip,trigger:'axis',axisPointer:{type:'shadow'}},
-  grid:{left:50,right:24,top:18,bottom:24},
-  xAxis:{type:'category',data:DATA.loc1.keys,...axis},
-  yAxis:{type:'value',...axis},
-  series:[{type:'bar',data:DATA.loc1.vals,barWidth:'46%',
-    itemStyle:{borderRadius:[4,4,0,0],
-      color:new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:C.cyan},{offset:1,color:C.blue}])},
-    label:{show:true,position:'top',color:'#bcd8f5'}}]
-});
+  document.getElementById('pt_trend').textContent =
+    '核心资源日趋势 · CPU / 内存使用率(%)  采样 ' + m.n_pref_days + ' 天';
 
-// trend line
-// trend title: 标注采样天数
-document.getElementById('pt_trend').textContent =
-  '核心资源日趋势 · CPU / 内存使用率(%)  采样 ' + DATA.meta.n_pref_days + ' 天';
+  G.model.setOption({
+    tooltip:{...tip,trigger:'item',formatter:'{b}: {c} 台 ({d}%)'},
+    legend:{bottom:4,textStyle:{color:'#9fc4e8',fontSize:11},itemWidth:10,itemHeight:10},
+    color:[C.cyan,C.blue,C.teal,C.purple,C.green,C.orange],
+    series:[{type:'pie',radius:['42%','66%'],center:['50%','46%'],
+      itemStyle:{borderColor:'#07152e',borderWidth:2},
+      label:{color:'#bcd8f5',fontSize:11,formatter:'{b}\n{c}'},
+      data:DATA.model.keys.map((k,i)=>({name:k,value:DATA.model.vals[i]}))}]
+  });
 
-mk('ch_trend').setOption({
-  tooltip:{...tip,trigger:'axis'},
-  legend:{top:0,right:10,textStyle:{color:'#9fc4e8',fontSize:11},itemWidth:14,itemHeight:8},
-  grid:{left:46,right:18,top:34,bottom:54},
-  xAxis:{type:'category',data:DATA.dates,boundaryGap:false,
-    axisLabel:{color:'#8fb4d8',fontSize:10,interval:Math.floor(DATA.dates.length/12)},...axis},
-  yAxis:{type:'value',max:100,...axis},
-  series:[
-    {name:'CPU使用率',type:'line',smooth:true,data:DATA.cpu_trend,symbol:'none',
-      lineStyle:{width:2,color:C.cyan},areaStyle:{color:new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'rgba(47,214,255,.35)'},{offset:1,color:'rgba(47,214,255,0)'}])}},
-    {name:'内存使用率',type:'line',smooth:true,data:DATA.mem_trend,symbol:'none',
-      lineStyle:{width:2,color:C.purple},areaStyle:{color:new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'rgba(155,123,255,.30)'},{offset:1,color:'rgba(155,123,255,0)'}])}}
-  ]
-});
+  G.loc.setOption({
+    tooltip:{...tip,trigger:'axis',axisPointer:{type:'shadow'}},
+    grid:{left:50,right:24,top:18,bottom:24},
+    xAxis:{type:'category',data:DATA.loc1.keys,...axis},
+    yAxis:{type:'value',...axis},
+    series:[{type:'bar',data:DATA.loc1.vals,barWidth:'46%',
+      itemStyle:{borderRadius:[4,4,0,0],
+        color:new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:C.cyan},{offset:1,color:C.blue}])},
+      label:{show:true,position:'top',color:'#bcd8f5'}}]
+  });
 
-// net line
-mk('ch_net').setOption({
-  tooltip:{...tip,trigger:'axis'},
-  legend:{top:0,right:10,textStyle:{color:'#9fc4e8',fontSize:11},itemWidth:14,itemHeight:8},
-  grid:{left:50,right:18,top:34,bottom:54},
-  xAxis:{type:'category',data:DATA.dates,boundaryGap:false,
-    axisLabel:{color:'#8fb4d8',fontSize:10,interval:Math.floor(DATA.dates.length/12)},...axis},
-  yAxis:{type:'value',...axis},
-  series:[
-    {name:'网络入站',type:'line',smooth:true,data:DATA.net_in_trend,symbol:'none',lineStyle:{width:2,color:C.teal}},
-    {name:'网络出站',type:'line',smooth:true,data:DATA.net_out_trend,symbol:'none',lineStyle:{width:2,color:C.orange}}
-  ]
-});
+  G.trend.setOption({
+    tooltip:{...tip,trigger:'axis'},
+    legend:{top:0,right:10,textStyle:{color:'#9fc4e8',fontSize:11},itemWidth:14,itemHeight:8},
+    grid:{left:46,right:18,top:34,bottom:54},
+    xAxis:{type:'category',data:DATA.dates,boundaryGap:false,
+      axisLabel:{color:'#8fb4d8',fontSize:10,interval:Math.floor(DATA.dates.length/12)},...axis},
+    yAxis:{type:'value',max:100,...axis},
+    series:[
+      {name:'CPU使用率',type:'line',smooth:true,data:DATA.cpu_trend,symbol:'none',
+        lineStyle:{width:2,color:C.cyan},areaStyle:{color:new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'rgba(47,214,255,.35)'},{offset:1,color:'rgba(47,214,255,0)'}])}},
+      {name:'内存使用率',type:'line',smooth:true,data:DATA.mem_trend,symbol:'none',
+        lineStyle:{width:2,color:C.purple},areaStyle:{color:new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'rgba(155,123,255,.30)'},{offset:1,color:'rgba(155,123,255,0)'}])}}
+    ]
+  });
 
-// cpu by loc
-mk('ch_cpuloc').setOption({
-  tooltip:{...tip,trigger:'axis',axisPointer:{type:'shadow'}},
-  grid:{left:40,right:18,top:18,bottom:24},
-  xAxis:{type:'category',data:DATA.cpu_loc.keys,...axis},
-  yAxis:{type:'value',max:100,...axis},
-  series:[{type:'bar',data:DATA.cpu_loc.vals,barWidth:'46%',
-    itemStyle:{borderRadius:[4,4,0,0],
-      color:new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:C.purple},{offset:1,color:C.blue}])},
-    label:{show:true,position:'top',color:'#bcd8f5',formatter:'{c}%'}}]
-});
+  G.net.setOption({
+    tooltip:{...tip,trigger:'axis'},
+    legend:{top:0,right:10,textStyle:{color:'#9fc4e8',fontSize:11},itemWidth:14,itemHeight:8},
+    grid:{left:50,right:18,top:34,bottom:54},
+    xAxis:{type:'category',data:DATA.dates,boundaryGap:false,
+      axisLabel:{color:'#8fb4d8',fontSize:10,interval:Math.floor(DATA.dates.length/12)},...axis},
+    yAxis:{type:'value',...axis},
+    series:[
+      {name:'网络入站',type:'line',smooth:true,data:DATA.net_in_trend,symbol:'none',lineStyle:{width:2,color:C.teal}},
+      {name:'网络出站',type:'line',smooth:true,data:DATA.net_out_trend,symbol:'none',lineStyle:{width:2,color:C.orange}}
+    ]
+  });
 
-// disk top10
-mk('ch_disk').setOption({
-  tooltip:{...tip,trigger:'axis',axisPointer:{type:'shadow'}},
-  grid:{left:120,right:36,top:8,bottom:18},
-  xAxis:{type:'value',max:100,...axis},
-  yAxis:{type:'category',data:DATA.disk_top.hosts,...axis,axisLabel:{color:'#8fb4d8',fontSize:10}},
-  series:[{type:'bar',data:DATA.disk_top.vals,barWidth:'58%',
-    itemStyle:{borderRadius:[0,4,4,0],
-      color:new echarts.graphic.LinearGradient(0,0,1,0,[{offset:0,color:C.blue},{offset:1,color:C.red}])},
-    label:{show:true,position:'right',color:'#bcd8f5',formatter:'{c}%'}}]
-});
+  G.cpuloc.setOption({
+    tooltip:{...tip,trigger:'axis',axisPointer:{type:'shadow'}},
+    grid:{left:40,right:18,top:18,bottom:24},
+    xAxis:{type:'category',data:DATA.cpu_loc.keys,...axis},
+    yAxis:{type:'value',max:100,...axis},
+    series:[{type:'bar',data:DATA.cpu_loc.vals,barWidth:'46%',
+      itemStyle:{borderRadius:[4,4,0,0],
+        color:new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:C.purple},{offset:1,color:C.blue}])},
+      label:{show:true,position:'top',color:'#bcd8f5',formatter:'{c}%'}}]
+  });
 
-// table
-const tb=document.getElementById('tbody');
-DATA.table.forEach(r=>{
-  const s = r.status==='告警'?'<span class="alarm">告警</span>'
-    : r.status==='关注'?'<span class="warn">关注</span>':'<span class="ok">正常</span>';
-  const tr=document.createElement('tr');
-  tr.innerHTML=`<td>${r.host}</td><td>${r.owner}</td><td>${r.model}</td><td>${r.loc}</td>
-    <td>${r.cpu}</td><td>${r.mem}</td><td>${r.disk}</td><td>${r.load}</td>
-    <td>${r.cpumx}</td><td>${r.diskmx}</td><td>${s}</td>`;
-  tb.appendChild(tr);
-});
+  G.disk.setOption({
+    tooltip:{...tip,trigger:'axis',axisPointer:{type:'shadow'}},
+    grid:{left:120,right:36,top:8,bottom:18},
+    xAxis:{type:'value',max:100,...axis},
+    yAxis:{type:'category',data:DATA.disk_top.hosts,...axis,axisLabel:{color:'#8fb4d8',fontSize:10}},
+    series:[{type:'bar',data:DATA.disk_top.vals,barWidth:'58%',
+      itemStyle:{borderRadius:[0,4,4,0],
+        color:new echarts.graphic.LinearGradient(0,0,1,0,[{offset:0,color:C.blue},{offset:1,color:C.red}])},
+      label:{show:true,position:'right',color:'#bcd8f5',formatter:'{c}%'}}]
+  });
+
+  const tb=document.getElementById('tbody'); tb.innerHTML='';
+  DATA.table.forEach(r=>{
+    const s = r.status==='告警'?'<span class="alarm">告警</span>'
+      : r.status==='关注'?'<span class="warn">关注</span>':'<span class="ok">正常</span>';
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td>${r.host}</td><td>${r.owner}</td><td>${r.model}</td><td>${r.loc}</td>
+      <td>${r.cpu}</td><td>${r.mem}</td><td>${r.disk}</td><td>${r.load}</td>
+      <td>${r.cpumx}</td><td>${r.diskmx}</td><td>${s}</td>`;
+    tb.appendChild(tr);
+  });
+
+  document.getElementById('err').style.display='none';
+}
 
 // clock
 function tick(){
   const d=new Date();
   const p=n=>String(n).padStart(2,'0');
   clk.textContent=`${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
-  dt.textContent=`${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}  数据区间 ${m.date_start} ~ ${m.date_end}`;
+  if(META) dt.textContent=`${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}  数据区间 ${META.date_start} ~ ${META.date_end}  更新 ${lastUpdate}`;
+  else dt.textContent=`${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}`;
 }
 tick(); setInterval(tick,1000);
 
@@ -466,6 +485,16 @@ function fit(){
 }
 window.addEventListener('resize',()=>{fit();charts.forEach(c=>c.resize());});
 fit();
+
+// 直连 MySQL: 拉取实时聚合数据并每 30s 刷新
+function load(){
+  fetch('/api/dashboard').then(r=>{ if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
+    .then(d=>{ if(d.error) throw new Error(d.error); lastUpdate=new Date().toLocaleTimeString(); render(d); })
+    .catch(e=>{ const el=document.getElementById('err'); el.style.display='block';
+      el.textContent='无法连接 /api/dashboard: '+e.message+'  (请先运行 python server.py 并确认 MySQL 已启动)'; });
+}
+load();
+setInterval(load, 30000);
 </script>
 </body>
 </html>
