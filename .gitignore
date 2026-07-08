@@ -1,0 +1,13 @@
+# Python
+__pycache__/
+*.pyc
+
+# 聚合中间产物(可由脚本重新生成)
+output/
+
+# 运行时生成的验证脚本
+mysql/_verify.sql
+
+# 操作系统 / 编辑器
+.DS_Store
+Thumbs.db

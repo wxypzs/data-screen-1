@@ -1,0 +1,50 @@
+# data-screen-1 · MySQL 服务
+# 数据库: data_screen  (utf8mb4, 支持中文)
+# 四张表: host_detail / mod_detail / disk_tsar / pref_tsar
+# 两个视图: v_disk_metrics / v_pref_metrics (指标已关联主机与指标元数据, 便于大屏查询)
+#
+# 自动化流程(首次启动):
+#   1) mysql/init/01_schema.sql  建库、建表、建视图
+#   2) mysql/init/02_load.sh     将 /seed/*.dat 拷入容器可写目录, 再执行 mysql/load.sql 导入
+# 重新初始化(清空数据后自动重建并导入):
+#   docker compose down -v && docker compose up -d
+#
+# 使用:
+#   docker compose up -d          # 启动并初始化(首次自动建表+导入)
+#   docker compose down           # 停止(保留数据卷)
+#   docker compose down -v        # 停止并删除数据卷(清空数据)
+#
+# 连接:
+#   主机 127.0.0.1:3307  数据库 data_screen   (本机 3306 已被本地 mysqld 占用, 故映射 3307)
+#   用户 root  密码 root123456
+
+name: data-screen
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: data-screen-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: root123456
+      MYSQL_DATABASE: data_screen
+      TZ: Asia/Shanghai
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --secure-file-priv=/var/lib/mysql-files
+      - --default-time-zone=+08:00
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./mysql/init:/docker-entrypoint-initdb.d:ro
+      - ./:/seed:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-proot123456"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    restart: unless-stopped
+
+volumes:
+  mysql_data:
