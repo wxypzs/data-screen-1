@@ -36,11 +36,11 @@
     background:linear-gradient(90deg,var(--accent),var(--accent2));-webkit-background-clip:text;background-clip:text;color:transparent;
     text-shadow:var(--glow);}
   #hd .en{position:absolute;font-size:12px;letter-spacing:5px;color:#5f86b8;top:54px;}
-  #hd .clock{position:absolute;right:26px;top:20px;text-align:right;}
+  #hd .clock{position:absolute;right:26px;top:20px;text-align:right;pointer-events:none;z-index:2;}
   #hd .clock .t{font-size:22px;color:var(--accent);font-weight:700;letter-spacing:1px;}
   #hd .clock .d{font-size:12px;color:#5f86b8;}
   #hd .tag{position:absolute;left:26px;top:22px;font-size:13px;color:#5f86b8;letter-spacing:2px;}
-  #themes{position:absolute;right:200px;top:22px;display:flex;gap:10px;}
+  #themes{position:absolute;right:200px;top:22px;display:flex;gap:10px;z-index:3;}
   .tb{font-size:13px;color:#9fc4e8;background:rgba(20,40,80,.4);border:1px solid var(--border);
     border-radius:16px;padding:6px 16px;cursor:pointer;letter-spacing:1px;transition:.2s;}
   .tb:hover{color:#fff;}
@@ -327,7 +327,7 @@ function renderB(D){
   });
   const maxSlot=Math.max(1,...Object.values(perLoc));
   const yLabels=[]; for(let i=0;i<maxSlot;i++) yLabels.push(String(i+1));
-  const c=mk('ch3d');
+  let c=mk('ch3d');
   if(c) c.setOption({
     tooltip:{...tipBase},
     visualMap:{show:true,min:0,max:100,dimension:2,
